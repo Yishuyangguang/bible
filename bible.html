@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>灵粮行旅 - 简体和合本趣味圣经伴读系统</title>
+  <!-- 自定义金十字图标 -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23d97706'/><text x='50' y='65' font-size='42' text-anchor='middle' fill='%23ffffff' font-family='serif'>✝</text></svg>">
+  
+  <!-- 引入专业高质量圣经音频播放模块 (戏剧圣经 / 磐石版 / 经典版) -->
+  <script src="bible-audio.js"></script>
+
+  <style>
+    :root {
+      --bg-warm: #fbf9f5;
+      --bg-card: #ffffff;
+      --primary: #d97706;
+      --primary-light: #fef3c7;
+      --primary-dark: #b45309;
+      --accent-green: #059669;
+      --accent-green-light: #d1fae5;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.03);
+      --shadow-md: 0 12px 28px rgba(0,0,0,0.06);
+      --font-serif: "Songti SC", "SimSun", "STSong", "KaiTi", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-warm);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { background: none; border: none; cursor: pointer; font-family: inherit; }
+    input, textarea { outline: none; font-family: inherit; }
+
+    /* ========== 顶部导航栏 ========== */
+    header {
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    .header-inner {
+      max-width: 1100px; margin: 0 auto; padding: 10px 16px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 17px; color: var(--text-main);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .brand-icon {
+      width: 34px; height: 34px; border-radius: 10px; background: var(--primary);
+      color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .nav-tabs {
+      display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tab-btn {
+      padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 700;
+      color: var(--text-muted); transition: all 0.2s; white-space: nowrap;
+    }
+    .nav-tab-btn.active {
+      background: var(--bg-card); color: var(--primary-dark);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    /* ========== 主内容区 ========== */
+    main { flex: 1; max-width: 1100px; width: 100%; margin: 0 auto; padding: 20px 16px 80px; }
+    .tab-section { display: none; animation: fadeIn 0.25s ease-out; }
+    .tab-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 18px; padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 18px;
+    }
+    .card-title {
+      font-size: 15.5px; font-weight: 800; color: var(--text-main); margin-bottom: 14px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    /* ========== 模块 1: 灵修主面板 ========== */
+    .dashboard-grid {
+      display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; margin-bottom: 18px;
+    }
+    .tree-box {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 10px 0; text-align: center;
+    }
+    .tree-stage-svg { width: 110px; height: 110px; transition: transform 0.3s; }
+    .tree-stage-svg:hover { transform: scale(1.06); }
+    .tree-status-title { font-size: 15px; font-weight: 800; margin-top: 10px; color: var(--accent-green); }
+    .tree-status-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .stats-bar {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px;
+    }
+    .stat-item {
+      background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px;
+      padding: 10px 6px; text-align: center;
+    }
+    .stat-val { font-size: 17px; font-weight: 800; color: var(--primary); }
+    .stat-label { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
+    /* 抽卡金句卡片 */
+    .gacha-card {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 1.5px solid #fde68a; border-radius: 18px; padding: 20px;
+      display: flex; flex-direction: column; justify-content: space-between; min-height: 230px;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.08); position: relative;
+    }
+    .gacha-badge {
+      font-size: 11px; font-weight: 800; color: #b45309; background: rgba(255,255,255,0.75);
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .gacha-verse {
+      font-family: var(--font-serif); font-size: 16px; line-height: 1.8; color: #451a03;
+      margin: 12px 0; font-weight: 600;
+    }
+    .gacha-ref { font-size: 12.5px; font-weight: 800; color: #92400e; text-align: right; }
+    .gacha-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap; }
+
+    .btn-pill {
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      background: #ffffff; color: #92400e; border: 1px solid #fcd34d; transition: all 0.2s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .btn-pill:hover { background: #fef3c7; }
+    .btn-pill-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-pill-primary:hover { background: var(--primary-dark); }
+
+    /* 专注计时器 */
+    .timer-container {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: #f8fafc; border: 1px solid var(--border-color); border-radius: 14px; padding: 14px 18px;
+    }
+    .timer-display { font-size: 24px; font-weight: 900; color: var(--text-main); font-variant-numeric: tabular-nums; }
+
+    /* ========== 模块 2: 圣经 66 卷全景书架 ========== */
+    .book-filter-bar {
+      display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .book-filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 700;
+      background: #f1f5f9; color: var(--text-muted); white-space: nowrap; transition: all 0.2s;
+    }
+    .filter-chip.active { background: var(--text-main); color: #fff; }
+
+    .books-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px;
+    }
+    .book-card {
+      background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px;
+      padding: 12px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column;
+      justify-content: space-between;
+    }
+    .book-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #cbd5e1; }
+    .book-card.completed {
+      border-color: var(--accent-green); background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+    }
+    .book-name { font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 2px; }
+    .book-category-tag { font-size: 10.5px; color: var(--text-muted); }
+    .book-progress-bg { height: 5px; background: #e2e8f0; border-radius: 10px; margin-top: 8px; overflow: hidden; }
+    .book-progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s; }
+    .book-card.completed .book-progress-fill { background: var(--accent-green); }
+    .book-count-text { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 3px; font-weight: 700; }
+
+    /* ========== 模块 3: 沉浸式经文阅读器弹窗 (核心) ========== */
+    .reader-modal-backdrop {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; z-index: 2000; padding: 14px;
+    }
+    .reader-modal-backdrop.active { display: flex; }
+    .reader-window {
+      background: #ffffff; width: 100%; max-width: 760px; height: 90vh; border-radius: 24px;
+      box-shadow: var(--shadow-md); display: flex; flex-direction: column; overflow: hidden;
+      animation: readerPop 0.22s ease-out;
+    }
+    @keyframes readerPop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .reader-header {
+      padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between;
+      align-items: center; background: #fffdf9;
+    }
+    .reader-header-title { font-size: 17px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+    .reader-scroll-body {
+      flex: 1; overflow-y: auto; padding: 24px 30px; background: #fdfbf7;
+      font-family: var(--font-serif); -webkit-overflow-scrolling: touch;
+    }
+    .reader-context-box {
+      background: #fef3c7; border-left: 4px solid var(--primary); padding: 12px 16px;
+      border-radius: 8px; font-size: 13px; color: #78350f; margin-bottom: 16px; font-family: var(--font-sans);
+      line-height: 1.6;
+    }
+    .verse-p {
+      font-size: 18px; line-height: 2.1; color: #2c2925; margin-bottom: 14px; text-align: justify;
+      position: relative;
+    }
+    .verse-num {
+      font-family: var(--font-sans); font-size: 11px; font-weight: 900; color: var(--primary);
+      margin-right: 6px; vertical-align: super; user-select: none;
+    }
+    
+    .reader-notes-area {
+      margin-top: 30px; padding-top: 20px; border-top: 1px dashed #cbd5e1; font-family: var(--font-sans);
+    }
+    .notes-textarea {
+      width: 100%; height: 75px; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 12px;
+      font-size: 13px; color: #334155; background: #ffffff; resize: none; margin-top: 6px;
+    }
+
+    .reader-footer {
+      padding: 14px 22px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between;
+      align-items: center; background: #ffffff;
+    }
+
+    /* ========== 模块 4: 天路历程地图 ========== */
+    .map-container {
+      position: relative; padding: 10px 0; display: flex; flex-direction: column; gap: 18px;
+    }
+    .map-step {
+      display: flex; gap: 14px; align-items: flex-start; opacity: 0.45; transition: all 0.3s;
+    }
+    .map-step.unlocked { opacity: 1; }
+    .map-step-icon {
+      width: 44px; height: 44px; border-radius: 50%; background: #e2e8f0; display: flex;
+      align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+      border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .map-step.unlocked .map-step-icon {
+      background: var(--primary-light); border-color: var(--primary); color: var(--primary-dark);
+    }
+    .map-step-content {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; flex: 1;
+    }
+    .map-step.unlocked .map-step-content { background: #fff; border-color: #fde68a; }
+
+    /* ========== 模块 5: 圣灵九果收集篮 ========== */
+    .fruit-basket-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px;
+    }
+    .fruit-card {
+      background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 14px;
+      text-align: center; cursor: pointer; transition: all 0.2s; opacity: 0.45; filter: grayscale(1);
+    }
+    .fruit-card.collected {
+      opacity: 1; filter: none; background: #ffffff; border-color: #a7f3d0; box-shadow: 0 4px 12px rgba(5,150,105,0.08);
+    }
+    .fruit-icon { font-size: 32px; margin-bottom: 6px; }
+    .fruit-name { font-size: 13.5px; font-weight: 800; color: var(--text-main); }
+    .fruit-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ========== 模块 6: 趣味问答挑战 ========== */
+    .quiz-opt-btn {
+      padding: 13px 16px; border-radius: 12px; background: #f8fafc; border: 1.5px solid #e2e8f0;
+      text-align: left; font-size: 13.5px; font-weight: 600; color: #334155; transition: all 0.2s;
+    }
+    .quiz-opt-btn:hover { background: #f1f5f9; }
+    .quiz-opt-btn.correct { background: #dcfce7 !important; border-color: #86efac !important; color: #15803d !important; }
+    .quiz-opt-btn.wrong { background: #fee2e2 !important; border-color: #fca5a5 !important; color: #dc2626 !important; }
+
+    @media (max-width: 768px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .reader-scroll-body { padding: 18px 16px; }
+      .verse-p { font-size: 16.5px; line-height: 1.9; }
+      .fruit-basket-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .fruit-icon { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 头部导航 -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon">✝</div>
+        <span>灵粮行旅</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab-btn active" onclick="switchTab('tab-journey')">🌱 灵修</button>
+        <button class="nav-tab-btn" onclick="switchTab('tab-shelf')">📖 经卷阅读</button>
+        <button class="nav-tab-btn" onclick="switchTab('tab-map')">🗺️ 天路地图</button>
+        <button class="nav-tab-btn" onclick="switchTab('tab-fruits')">🍎 圣灵九果</button>
+        <button class="nav-tab-btn" onclick="switchTab('tab-quiz')">⚔️ 趣味挑战</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: 每日灵修与生命之树 -->
+    <section id="tab-journey" class="tab-section active">
+      <div class="dashboard-grid">
+        <!-- 生命树视觉卡片 -->
+        <div class="card">
+          <div class="card-title">
+            <span>🌱 属灵生命之树</span>
+            <span style="font-size:12px; color:var(--text-muted);" id="overallProgressPercent">0.0%</span>
+          </div>
+          <div class="tree-box">
+            <svg class="tree-stage-svg" viewBox="0 0 100 100" id="treeSvg"></svg>
+            <div class="tree-status-title" id="treeLevelText">生命嫩芽 (第 1 阶)</div>
+            <div class="tree-status-desc" id="treeSubtitle">已点亮 0 / 1189 章圣经经文</div>
+          </div>
+          <div class="stats-bar">
+            <div class="stat-item">
+              <div class="stat-val" id="statStreak">1</div>
+              <div class="stat-label">连续打卡(天)</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="statReadChapters">0</div>
+              <div class="stat-label">已读总章数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="statExp">0</div>
+              <div class="stat-label">灵粮经验 (EXP)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 每日金句盲盒抽卡与日签海报生成 -->
+        <div class="gacha-card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="gacha-badge">✨ 今日灵粮盲盒</div>
+            <button onclick="drawNewVerse()" style="font-size:12px; color:#b45309; font-weight:700;">🔄 换一张</button>
+          </div>
+          <div>
+            <div class="gacha-verse" id="verseContent">“你的话是我脚前的灯，是我路上的光。”</div>
+            <div class="gacha-ref" id="verseRef">—— 诗篇 119:105</div>
+          </div>
+          <div class="gacha-actions">
+            <button class="btn-pill" onclick="generateVersePoster()">🖼️ 生成日签海报</button>
+            <button class="btn-pill" onclick="copyCurrentVerse()">📋 复制金句</button>
+            <button class="btn-pill btn-pill-primary" onclick="markDailyDone()">✓ 今日打卡 (+20 EXP)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 专注读经番茄钟 -->
+      <div class="card">
+        <div class="card-title">
+          <span>⏱️ 静心读经番茄钟</span>
+          <span style="font-size:11.5px; color:var(--text-muted);">远离喧嚣 · 专心默想神的话语</span>
+        </div>
+        <div class="timer-container">
+          <div>
+            <div class="timer-display" id="timerDisplay">15:00</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">推荐每次静心阅读 15 分钟</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-pill" onclick="setTimer(15)">15分</button>
+            <button class="btn-pill" onclick="setTimer(30)">30分</button>
+            <button class="btn-pill btn-pill-primary" id="btnToggleTimer" onclick="toggleTimer()">▶ 开始专注</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 圣经 66 卷全景书架与章节选读 -->
+    <section id="tab-shelf" class="tab-section">
+      <div class="book-filter-bar">
+        <button class="filter-chip active" onclick="filterBooks('all', this)">全部 66 卷</button>
+        <button class="filter-chip" onclick="filterBooks('摩西五经', this)">摩西五经 (5)</button>
+        <button class="filter-chip" onclick="filterBooks('历史书', this)">历史书 (12)</button>
+        <button class="filter-chip" onclick="filterBooks('诗歌智慧书', this)">诗歌智慧书 (5)</button>
+        <button class="filter-chip" onclick="filterBooks('先知书', this)">先知书 (17)</button>
+        <button class="filter-chip" onclick="filterBooks('福音历史', this)">福音与行传 (5)</button>
+        <button class="filter-chip" onclick="filterBooks('书信启示', this)">书信与启示录 (22)</button>
+      </div>
+
+      <div class="books-grid" id="booksContainer"></div>
+    </section>
+
+    <!-- TAB 3: 天路历程探索地图 -->
+    <section id="tab-map" class="tab-section">
+      <div class="card">
+        <div class="card-title">
+          <span>🗺️ 天路历程探索地图</span>
+          <span style="font-size:12px; color:var(--primary);" id="mapMilestoneText">解锁地标 1 / 6</span>
+        </div>
+        <div class="map-container" id="mapStepsContainer"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 圣灵九果收集篮 -->
+    <section id="tab-fruits" class="tab-section">
+      <div class="card">
+        <div class="card-title">
+          <span>🍎 圣灵九种果子收集篮</span>
+          <span style="font-size:12px; color:var(--accent-green);" id="fruitProgressText">已结出 0 / 9 颗</span>
+        </div>
+        <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">
+          “圣灵所结的果子，就是仁爱、喜乐、和平、忍耐、恩慈、良善、信实、温柔、节制。”（加拉太书 5:22-23）坚持每日读经即可催熟并收获果实！
+        </p>
+        <div class="fruit-basket-grid" id="fruitGrid"></div>
+      </div>
+    </section>
+
+    <!-- TAB 5: 趣味挑战与问答 -->
+    <section id="tab-quiz" class="tab-section">
+      <div class="card" style="max-width:640px; margin:0 auto;">
+        <div class="card-title">
+          <span>⚔️ 圣经知识挑战</span>
+          <span style="font-size:12px; color:var(--text-muted);">答对赢取 +15 EXP</span>
+        </div>
+        <div style="font-size:15px; font-weight:800; margin-bottom:14px; line-height:1.6;" id="quizQuestion">正在加载...</div>
+        <div style="display:flex; flex-direction:column; gap:8px;" id="quizOptions"></div>
+        <div id="quizExpl" style="margin-top:14px; padding:12px 14px; background:#f0fdf4; border-radius:10px; font-size:12.5px; color:#166534; display:none; line-height:1.6;"></div>
+        <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+          <button class="btn-pill btn-pill-primary" id="btnNextQuiz" onclick="nextQuiz()" style="display:none;">下一题 ➔</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 📖 沉浸式经文阅读与打卡弹窗 (核心组件) -->
+  <div class="reader-modal-backdrop" id="readerModal">
+    <div class="reader-window">
+      <div class="reader-header">
+        <div class="reader-header-title">
+          <span id="readerBookTitle">创世记 第 1 章</span>
+          <span id="readerCheckTag" style="font-size:11px; padding:2px 8px; border-radius:12px; background:#e2e8f0; color:#475569; font-family:var(--font-sans);">未读</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <!-- 播放音频按钮 -->
+          <button class="btn-pill" id="btnTtsRead" onclick="toggleTtsRead()">🔊 朗读</button>
+          <button onclick="closeReaderModal()" style="font-size:18px; color:var(--text-muted); padding:4px;">✕</button>
+        </div>
+      </div>
+
+      <!-- 经文内容滚动区 -->
+      <div class="reader-scroll-body" id="readerScrollContent">
+        <div class="reader-context-box" id="readerContextIntro">
+          <b>【章节导读】</b> 正在调取简体和合本经文...
+        </div>
+        <div id="readerVersesBody"></div>
+
+        <!-- 灵修笔记区 -->
+        <div class="reader-notes-area">
+          <div style="font-size:13px; font-weight:800; color:#374151;">✍️ 本章灵修感言 / 随想笔记</div>
+          <textarea class="notes-textarea" id="chapterNoteInput" placeholder="写下神今天通过本章对你说的感动... (自动本地保存)"></textarea>
+        </div>
+      </div>
+
+      <div class="reader-footer">
+        <button class="btn-pill" onclick="switchChapter(-1)">◀ 上一章</button>
+        <button class="btn-pill btn-pill-primary" id="btnMarkChapterDone" onclick="toggleCurrentChapterDone()">✓ 读毕打卡 (+10 EXP)</button>
+        <button class="btn-pill" onclick="switchChapter(1)">下一章 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 隐藏 Canvas 用于生成金句海报 -->
+  <canvas id="posterCanvas" width="750" height="1050" style="display:none;"></canvas>
+
+  <script>
+    /* ================= 1. 圣经 66 卷标准目录 ================= */
+    const BIBLE_BOOKS = [
+      { name: "创世记", chapters: 50, cat: "摩西五经" }, { name: "出埃及记", chapters: 40, cat: "摩西五经" },
+      { name: "利未记", chapters: 27, cat: "摩西五经" }, { name: "民数记", chapters: 36, cat: "摩西五经" },
+      { name: "申命记", chapters: 34, cat: "摩西五经" }, { name: "约书亚记", chapters: 24, cat: "历史书" },
+      { name: "士师记", chapters: 21, cat: "历史书" }, { name: "路得记", chapters: 4, cat: "历史书" },
+      { name: "撒母耳记上", chapters: 31, cat: "历史书" }, { name: "撒母耳记下", chapters: 24, cat: "历史书" },
+      { name: "列王纪上", chapters: 22, cat: "历史书" }, { name: "列王纪下", chapters: 25, cat: "历史书" },
+      { name: "历代志上", chapters: 29, cat: "历史书" }, { name: "历代志下", chapters: 36, cat: "历史书" },
+      { name: "以斯拉记", chapters: 10, cat: "历史书" }, { name: "尼希米记", chapters: 13, cat: "历史书" },
+      { name: "以斯帖记", chapters: 10, cat: "历史书" }, { name: "约伯记", chapters: 42, cat: "诗歌智慧书" },
+      { name: "诗篇", chapters: 150, cat: "诗歌智慧书" }, { name: "箴言", chapters: 31, cat: "诗歌智慧书" },
+      { name: "传道书", chapters: 12, cat: "诗歌智慧书" }, { name: "雅歌", chapters: 8, cat: "诗歌智慧书" },
+      { name: "以赛亚书", chapters: 66, cat: "先知书" }, { name: "耶利米书", chapters: 52, cat: "先知书" },
+      { name: "耶利米哀歌", chapters: 5, cat: "先知书" }, { name: "以西结书", chapters: 48, cat: "先知书" },
+      { name: "但以理书", chapters: 12, cat: "先知书" }, { name: "何西阿书", chapters: 14, cat: "先知书" },
+      { name: "约珥书", chapters: 3, cat: "先知书" }, { name: "阿摩司书", chapters: 9, cat: "先知书" },
+      { name: "俄巴底亚书", chapters: 1, cat: "先知书" }, { name: "约拿书", chapters: 4, cat: "先知书" },
+      { name: "弥迦书", chapters: 7, cat: "先知书" }, { name: "那鸿书", chapters: 3, cat: "先知书" },
+      { name: "哈巴谷书", chapters: 3, cat: "先知书" }, { name: "西番雅书", chapters: 3, cat: "先知书" },
+      { name: "哈该书", chapters: 2, cat: "先知书" }, { name: "撒迦利亚书", chapters: 14, cat: "先知书" },
+      { name: "玛拉基书", chapters: 4, cat: "先知书" }, { name: "马太福音", chapters: 28, cat: "福音历史" },
+      { name: "马可福音", chapters: 16, cat: "福音历史" }, { name: "路加福音", chapters: 24, cat: "福音历史" },
+      { name: "约翰福音", chapters: 21, cat: "福音历史" }, { name: "使徒行传", chapters: 28, cat: "福音历史" },
+      { name: "罗马书", chapters: 16, cat: "书信启示" }, { name: "哥林多前书", chapters: 16, cat: "书信启示" },
+      { name: "哥林多后书", chapters: 13, cat: "书信启示" }, { name: "加拉太书", chapters: 6, cat: "书信启示" },
+      { name: "以弗所书", chapters: 6, cat: "书信启示" }, { name: "腓立比书", chapters: 4, cat: "书信启示" },
+      { name: "歌罗西书", chapters: 4, cat: "书信启示" }, { name: "帖撒罗尼迦前书", chapters: 5, cat: "书信启示" },
+      { name: "帖撒罗尼迦后书", chapters: 3, cat: "书信启示" }, { name: "提摩太前书", chapters: 6, cat: "书信启示" },
+      { name: "提摩太后书", chapters: 4, cat: "书信启示" }, { name: "提多书", chapters: 3, cat: "书信启示" },
+      { name: "腓利门书", chapters: 1, cat: "书信启示" }, { name: "希伯来书", chapters: 13, cat: "书信启示" },
+      { name: "雅各书", chapters: 5, cat: "书信启示" }, { name: "彼得前书", chapters: 5, cat: "书信启示" },
+      { name: "彼得后书", chapters: 3, cat: "书信启示" }, { name: "约翰一书", chapters: 5, cat: "书信启示" },
+      { name: "约翰二书", chapters: 1, cat: "书信启示" }, { name: "约翰三书", chapters: 1, cat: "书信启示" },
+      { name: "犹大书", chapters: 1, cat: "书信启示" }, { name: "启示录", chapters: 22, cat: "书信启示" }
+    ];
+
+    const BOOK_ID_MAP = {};
+    BIBLE_BOOKS.forEach((b, idx) => { BOOK_ID_MAP[b.name] = idx + 1; });
+
+    const GOLDEN_VERSES = [
+      { text: "“你的话是我脚前的灯，是我路上的光。”", ref: "诗篇 119:105" },
+      { text: "“你要专心仰赖耶和华，不可倚靠自己的聪明，在你一切所行的事上都要认定他，他必指引你的路。”", ref: "箴言 3:5-6" },
+      { text: "“应当一无挂虑，只要凡事藉着祷告、祈求，和感谢，将你们所要的告诉神。神所赐出人意外的平安，必在基督耶稣里保守你们的心怀意念。”", ref: "腓立比书 4:6-7" },
+      { text: "“我靠着那加给我力量的，凡事都能做。”", ref: "腓立比书 4:13" },
+      { text: "“神爱世人，甚至将他的独生子赐给他们，叫一切信他的，不至灭亡，反得永生。”", ref: "约翰福音 3:16" },
+      { text: "“爱是恒久忍耐，又有恩慈；爱是不嫉妒；爱是不自夸，不张狂。”", ref: "哥林多前书 13:4" }
+    ];
+
+    const PILGRIM_STEPS = [
+      { name: "伊甸乐园", req: 1, icon: "🌱", desc: "开始灵修旅程，见证起初的创造" },
+      { name: "红海奇迹", req: 20, icon: "🌊", desc: "读完 20 章，经历旷野拯救与恩典" },
+      { name: "西奈圣山", req: 60, icon: "⚡", desc: "读完 60 章，领受立约与律法指引" },
+      { name: "迦南美地", req: 150, icon: "🍇", desc: "读完 150 章，跨越约旦河得地为业" },
+      { name: "橄榄之山", req: 300, icon: "🕊️", desc: "读完 300 章，聆听主耶稣天国福音" },
+      { name: "新耶路撒冷", req: 1189, icon: "👑", desc: "通读全本圣经，与神同在直到永远" }
+    ];
+
+    const SPIRIT_FRUITS = [
+      { name: "仁爱", icon: "❤️", desc: "主舍命的爱", req: 3 },
+      { name: "喜乐", icon: "😄", desc: "在主里的满足", req: 8 },
+      { name: "和平", icon: "🕊️", desc: "出人意外的平安", req: 15 },
+      { name: "忍耐", icon: "⏳", desc: "在指望中恒久", req: 25 },
+      { name: "恩慈", icon: "🤲", desc: "以慈爱待众人", req: 40 },
+      { name: "良善", icon: "✨", desc: "行神喜悦之善", req: 60 },
+      { name: "信实", icon: "🛡️", desc: "坚定不移的信靠", req: 90 },
+      { name: "温柔", icon: "🌸", desc: "谦卑受教之心", req: 130 },
+      { name: "节制", icon: "⚓", desc: "靠主得胜自律", req: 200 }
+    ];
+
+    const QUIZ_BANK = [
+      { q: "圣经中被称为‘信心之父’的人物是谁？", opts: ["亚伯拉罕", "摩西", "大卫", "彼得"], ans: 0, expl: "亚伯拉罕因着信蒙神选召，被称为信心之父（创世记 12-15章）。" },
+      { q: "诗篇中最长的一篇是哪一篇？", opts: ["诗篇 23篇", "诗篇 90篇", "诗篇 119篇", "诗篇 150篇"], ans: 2, expl: "诗篇 119 篇共有 176 节，是全本圣经最长的一章，主题为赞美神的话语。" },
+      { q: "新约四福音书中，哪一卷重点描写耶稣作为‘受苦的仆人’？", opts: ["马太福音", "马可福音", "路加福音", "约翰福音"], ans: 1, expl: "马可福音着重记载耶稣服侍众人并舍命作多人的赎价。" }
+    ];
+
+    /* ================= 2. 本地持久化状态 ================= */
+    let userData = {
+      readChapters: {},
+      notes: {},
+      streak: 1,
+      lastReadDate: "",
+      exp: 0,
+      todayMarked: false
+    };
+
+    let curReadingBook = "创世记";
+    let curReadingChapter = 1;
+    let timerSeconds = 15 * 60;
+    let timerInterval = null;
+    let currentQuizIdx = 0;
+
+    function loadUserData() {
+      try {
+        const saved = localStorage.getItem('bible_journey_data');
+        if (saved) userData = JSON.parse(saved);
+      } catch(e){}
+      updateAllUI();
+    }
+
+    function saveUserData() {
+      localStorage.setItem('bible_journey_data', JSON.stringify(userData));
+      updateAllUI();
+    }
+
+    function getTotalReadCount() {
+      let count = 0;
+      for (const b in userData.readChapters) {
+        count += (userData.readChapters[b] || []).length;
+      }
+      return count;
+    }
+
+    function updateAllUI() {
+      const readCount = getTotalReadCount();
+      const percent = ((readCount / 1189) * 100).toFixed(1);
+
+      document.getElementById('overallProgressPercent').innerText = `${percent}%`;
+      document.getElementById('statReadChapters').innerText = readCount;
+      document.getElementById('statStreak').innerText = userData.streak || 1;
+      document.getElementById('statExp').innerText = userData.exp || 0;
+      document.getElementById('treeSubtitle').innerText = `已点亮 ${readCount} / 1189 章圣经经文`;
+
+      renderTreeSvg(readCount);
+      renderBooks();
+      renderMap(readCount);
+      renderFruits(readCount);
+    }
+
+    function renderTreeSvg(count) {
+      const svg = document.getElementById('treeSvg');
+      const title = document.getElementById('treeLevelText');
+      if (count < 10) {
+        title.innerText = "生命嫩芽 (第 1 阶)";
+        svg.innerHTML = `<circle cx="50" cy="85" r="12" fill="#d97706" opacity="0.2"/><path d="M50 85 Q50 65 48 55 Q42 50 36 52 Q44 42 50 50 Q56 42 64 52 Q58 50 52 55 Q50 65 50 85 Z" fill="#059669"/><circle cx="50" cy="46" r="3" fill="#f59e0b"/>`;
+      } else if (count < 80) {
+        title.innerText = "青翠幼树 (第 2 阶)";
+        svg.innerHTML = `<rect x="47" y="55" width="6" height="32" rx="3" fill="#78350f"/><circle cx="50" cy="45" r="22" fill="#10b981"/><circle cx="42" cy="38" r="14" fill="#34d399"/><circle cx="58" cy="42" r="15" fill="#059669"/>`;
+      } else {
+        title.innerText = "硕果参天 (生命之树)";
+        svg.innerHTML = `<path d="M45 90 Q48 60 50 42 Q40 32 32 36 M55 90 Q52 60 50 42 Q60 32 68 36" stroke="#5c2b09" stroke-width="7" stroke-linecap="round"/><circle cx="50" cy="32" r="32" fill="#047857"/><circle cx="30" cy="34" r="22" fill="#10b981"/><circle cx="70" cy="34" r="22" fill="#059669"/><circle cx="50" cy="18" r="20" fill="#34d399"/><circle cx="40" cy="32" r="4.5" fill="#fbbf24"/><circle cx="62" cy="28" r="4.5" fill="#f59e0b"/><circle cx="50" cy="42" r="5" fill="#d97706"/>`;
+      }
+    }
+
+    function renderBooks(filterCat = 'all') {
+      const container = document.getElementById('booksContainer');
+      const filtered = filterCat === 'all' ? BIBLE_BOOKS : BIBLE_BOOKS.filter(b => b.cat === filterCat);
+
+      container.innerHTML = filtered.map(book => {
+        const readArr = userData.readChapters[book.name] || [];
+        const pct = Math.round((readArr.length / book.chapters) * 100);
+        const isDone = readArr.length === book.chapters;
+
+        return `
+          <div class="book-card ${isDone ? 'completed' : ''}" onclick="openReaderModal('${book.name}', 1)">
+            <div>
+              <div class="book-name">${book.name}</div>
+              <div class="book-category-tag">${book.cat}</div>
+            </div>
+            <div>
+              <div class="book-progress-bg">
+                <div class="book-progress-fill" style="width:${pct}%"></div>
+              </div>
+              <div class="book-count-text">${readArr.length}/${book.chapters}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterBooks(cat, el) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      renderBooks(cat);
+    }
+
+    /* ================= 3. 沉浸式经文阅读器 (核心逻辑) ================= */
+    async function openReaderModal(bookName, chapterNum) {
+      stopTts();
+      curReadingBook = bookName;
+      curReadingChapter = chapterNum;
+
+      document.getElementById('readerBookTitle').innerText = `${bookName} 第 ${chapterNum} 章 (简体和合本)`;
+      
+      const readArr = userData.readChapters[bookName] || [];
+      const isRead = readArr.includes(chapterNum);
+      const tag = document.getElementById('readerCheckTag');
+      const btnDone = document.getElementById('btnMarkChapterDone');
+
+      if (isRead) {
+        tag.innerText = "✓ 已读";
+        tag.style.background = "#dcfce7";
+        tag.style.color = "#15803d";
+        btnDone.innerText = "取消本章打卡";
+      } else {
+        tag.innerText = "未读";
+        tag.style.background = "#e2e8f0";
+        tag.style.color = "#475569";
+        btnDone.innerText = "✓ 读毕打卡 (+10 EXP)";
+      }
+
+      document.getElementById('readerContextIntro').innerHTML = `<b>【灵修导读】</b> 正在调取【${bookName} 第 ${chapterNum} 章】简体经文...`;
+      document.getElementById('readerVersesBody').innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8;">⏳ 正在调取简体和合本圣经经文...</div>`;
+      document.getElementById('readerModal').classList.add('active');
+
+      const bookId = BOOK_ID_MAP[bookName] || 1;
+
+      try {
+        // CUNPS 为全球开源标准简体新标点和合本代码
+        const res = await fetch(`https://bolls.life/get-chapter/CUNPS/${bookId}/${chapterNum}/`);
+        const data = await res.json();
+
+        if (Array.isArray(data) && data.length > 0) {
+          document.getElementById('readerContextIntro').innerHTML = `<b>【章节概览】</b> ${bookName} 第 ${chapterNum} 章 · 简体和合本经文`;
+          document.getElementById('readerVersesBody').innerHTML = data.map(item => `
+            <p class="verse-p">
+              <span class="verse-num">${item.verse}</span>${item.text}
+            </p>
+          `).join('');
+        } else {
+          throw new Error("数据为空");
+        }
+      } catch (err) {
+        document.getElementById('readerVersesBody').innerHTML = `
+          <div style="text-align:center; padding:20px; color:#ef4444;">
+            经文加载受阻，请检查网络连接。<br>
+            <button class="btn-pill" style="margin-top:10px;" onclick="openReaderModal('${bookName}', ${chapterNum})">🔄 点击重新加载</button>
+          </div>
+        `;
+      }
+
+      const noteKey = `${bookName}_${chapterNum}`;
+      document.getElementById('chapterNoteInput').value = (userData.notes && userData.notes[noteKey]) || '';
+    }
+
+    function closeReaderModal() {
+      stopTts();
+      saveChapterNote();
+      document.getElementById('readerModal').classList.remove('active');
+    }
+
+    function switchChapter(delta) {
+      stopTts();
+      saveChapterNote();
+      const book = BIBLE_BOOKS.find(b => b.name === curReadingBook);
+      if (!book) return;
+      let target = curReadingChapter + delta;
+      if (target < 1) target = 1;
+      if (target > book.chapters) target = book.chapters;
+      openReaderModal(curReadingBook, target);
+    }
+
+    function toggleCurrentChapterDone() {
+      let readArr = userData.readChapters[curReadingBook] || [];
+      if (readArr.includes(curReadingChapter)) {
+        readArr = readArr.filter(c => c !== curReadingChapter);
+      } else {
+        readArr.push(curReadingChapter);
+        userData.exp = (userData.exp || 0) + 10;
+      }
+      userData.readChapters[curReadingBook] = readArr;
+      saveUserData();
+      openReaderModal(curReadingBook, curReadingChapter);
+    }
+
+    function saveChapterNote() {
+      const text = document.getElementById('chapterNoteInput').value.trim();
+      if (!userData.notes) userData.notes = {};
+      const noteKey = `${curReadingBook}_${curReadingChapter}`;
+      if (text) userData.notes[noteKey] = text;
+      else delete userData.notes[noteKey];
+      localStorage.setItem('bible_journey_data', JSON.stringify(userData));
+    }
+
+    /* 联动专业音频模块播放 (戏剧圣经 / 磐石版) */
+    function toggleTtsRead() {
+      if (window.BibleAudio) {
+        window.BibleAudio.toggle(curReadingBook, curReadingChapter);
+      } else {
+        alert("音频模块加载中，请稍候...");
+      }
+    }
+
+    function stopTts() {
+      if (window.BibleAudio) {
+        window.BibleAudio.pause();
+      }
+    }
+
+    /* ================= 4. 天路地图与圣灵果实 ================= */
+    function renderMap(count) {
+      const container = document.getElementById('mapStepsContainer');
+      let unlockedIndex = 0;
+      container.innerHTML = PILGRIM_STEPS.map((s, idx) => {
+        const isUnlocked = count >= s.req;
+        if (isUnlocked) unlockedIndex = idx + 1;
+        return `
+          <div class="map-step ${isUnlocked ? 'unlocked' : ''}">
+            <div class="map-step-icon">${s.icon}</div>
+            <div class="map-step-content">
+              <div style="font-weight:800; font-size:14px; color:#1e293b;">${s.name} ${isUnlocked ? '✓' : '🔒'}</div>
+              <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">${s.desc} (需读完 ${s.req} 章)</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('mapMilestoneText').innerText = `已到达地标 ${unlockedIndex} / ${PILGRIM_STEPS.length}`;
+    }
+
+    function renderFruits(count) {
+      const container = document.getElementById('fruitGrid');
+      let collectedCount = 0;
+      container.innerHTML = SPIRIT_FRUITS.map(f => {
+        const isGot = count >= f.req;
+        if (isGot) collectedCount++;
+        return `
+          <div class="fruit-card ${isGot ? 'collected' : ''}" onclick="alert('【圣灵果子：${f.name}】\\n${f.desc}\\n愿主的品格成就在我们生命中！')">
+            <div class="fruit-icon">${f.icon}</div>
+            <div class="fruit-name">${f.name}</div>
+            <div class="fruit-desc">${isGot ? '已结出' : f.req + '章解锁'}</div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('fruitProgressText').innerText = `已结出 ${collectedCount} / 9 颗`;
+    }
+
+    /* ================= 5. 金句日签海报 Canvas 生成 ================= */
+    function generateVersePoster() {
+      const canvas = document.getElementById('posterCanvas');
+      const ctx = canvas.getContext('2d');
+      const verse = document.getElementById('verseContent').innerText;
+      const ref = document.getElementById('verseRef').innerText;
+
+      // 绘制背景与金色古雅边框
+      ctx.fillStyle = "#fffdf9";
+      ctx.fillRect(0, 0, 750, 1050);
+
+      ctx.strokeStyle = "#d97706";
+      ctx.lineWidth = 4;
+      ctx.strokeRect(30, 30, 690, 990);
+
+      ctx.strokeStyle = "#fde68a";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(40, 40, 670, 970);
+
+      // 标题
+      ctx.fillStyle = "#b45309";
+      ctx.font = "bold 32px serif";
+      ctx.textAlign = "center";
+      ctx.fillText("✦ 每日灵粮 · 圣经日签 ✦", 375, 120);
+
+      // 十字架徽章
+      ctx.fillStyle = "#d97706";
+      ctx.font = "40px serif";
+      ctx.fillText("✝", 375, 190);
+
+      // 金句正文自动换行
+      ctx.fillStyle = "#262626";
+      ctx.font = "bold 34px serif";
+      ctx.textAlign = "left";
+      
+      const words = verse.replace(/[“”"']/g, '');
+      let line = '';
+      let y = 340;
+      for (let i = 0; i < words.length; i++) {
+        line += words[i];
+        if (line.length >= 14 || i === words.length - 1) {
+          ctx.fillText("“ " + line, 100, y);
+          line = '';
+          y += 65;
+        }
+      }
+
+      // 出处
+      ctx.fillStyle = "#92400e";
+      ctx.font = "bold 26px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(ref, 630, y + 50);
+
+      // 底部印鉴
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "20px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("灵粮行旅 · 向阳而生 · 圣经伴读系统", 375, 960);
+
+      // 导出图片
+      const imgData = canvas.toDataURL('image/png');
+      const win = window.open();
+      if (win) {
+        win.document.write(`<title>金句日签海报</title><body style="margin:0; background:#111; display:flex; justify-content:center; align-items:center; min-height:100vh;"><img src="${imgData}" style="max-width:90vw; max-height:92vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);"><p style="position:fixed; bottom:12px; color:#fff; font-family:sans-serif; font-size:13px;">长按或右键直接保存图片发送朋友圈</p></body>`);
+      } else {
+        alert("海报已生成！请允许浏览器弹出窗口查看图片。");
+      }
+    }
+
+    /* ================= 6. 专注读经番茄钟 ================= */
+    function setTimer(mins) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerSeconds = mins * 60;
+      updateTimerDisplay();
+      document.getElementById('btnToggleTimer').innerText = "▶ 开始专注";
+    }
+
+    function toggleTimer() {
+      const btn = document.getElementById('btnToggleTimer');
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        btn.innerText = "▶ 继续专注";
+      } else {
+        btn.innerText = "⏸ 暂停";
+        timerInterval = setInterval(() => {
+          timerSeconds--;
+          updateTimerDisplay();
+          if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            btn.innerText = "▶ 开始专注";
+            alert("🎉 恭喜！你已完成专注读经，愿主的话语常存在你心里！");
+          }
+        }, 1000);
+      }
+    }
+
+    function updateTimerDisplay() {
+      const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+      const s = (timerSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `${m}:${s}`;
+    }
+
+    /* ================= 7. 问答与抽卡 ================= */
+    function drawNewVerse() {
+      const idx = Math.floor(Math.random() * GOLDEN_VERSES.length);
+      const v = GOLDEN_VERSES[idx];
+      document.getElementById('verseContent').innerText = v.text;
+      document.getElementById('verseRef').innerText = `—— ${v.ref}`;
+    }
+
+    function copyCurrentVerse() {
+      const text = `${document.getElementById('verseContent').innerText} ${document.getElementById('verseRef').innerText}`;
+      navigator.clipboard.writeText(text).then(() => alert("✨ 简体金句已复制到剪贴板！"));
+    }
+
+    function markDailyDone() {
+      userData.streak = (userData.streak || 0) + 1;
+      userData.exp = (userData.exp || 0) + 20;
+      saveUserData();
+      alert("🎉 今日灵修打卡成功！获得 +20 属灵经验！");
+    }
+
+    function renderQuiz() {
+      const q = QUIZ_BANK[currentQuizIdx];
+      document.getElementById('quizQuestion').innerText = `第 ${currentQuizIdx + 1} 题：${q.q}`;
+      document.getElementById('quizExpl').style.display = 'none';
+      document.getElementById('btnNextQuiz').style.display = 'none';
+
+      const optBox = document.getElementById('quizOptions');
+      optBox.innerHTML = q.opts.map((opt, i) => `
+        <button class="quiz-opt-btn" onclick="answerQuiz(${i}, this)">${String.fromCharCode(65 + i)}. ${opt}</button>
+      `).join('');
+    }
+
+    function answerQuiz(chosenIdx, btnEl) {
+      const q = QUIZ_BANK[currentQuizIdx];
+      document.querySelectorAll('.quiz-opt-btn').forEach(b => b.style.pointerEvents = 'none');
+
+      if (chosenIdx === q.ans) {
+        btnEl.classList.add('correct');
+        userData.exp = (userData.exp || 0) + 15;
+        saveUserData();
+      } else {
+        btnEl.classList.add('wrong');
+        document.querySelectorAll('.quiz-opt-btn')[q.ans].classList.add('correct');
+      }
+
+      const expl = document.getElementById('quizExpl');
+      expl.innerHTML = `<b>【圣经解析】</b> ${q.expl}`;
+      expl.style.display = 'block';
+      document.getElementById('btnNextQuiz').style.display = 'block';
+    }
+
+    function nextQuiz() {
+      currentQuizIdx = (currentQuizIdx + 1) % QUIZ_BANK.length;
+      renderQuiz();
+    }
+
+    /* Tab 切换 */
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+
+      const tabs = ['tab-journey', 'tab-shelf', 'tab-map', 'tab-fruits', 'tab-quiz'];
+      const idx = tabs.indexOf(tabId);
+      if (idx !== -1) document.querySelectorAll('.nav-tab-btn')[idx].classList.add('active');
+
+      if (tabId === 'tab-quiz') renderQuiz();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadUserData();
+      drawNewVerse();
+    });
+  </script>
+</body>
+</html>
