@@ -4,10 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>灵粮行旅 - 简体和合本趣味圣经伴读系统</title>
-  <!-- 自定义金十字图标 -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23d97706'/><text x='50' y='65' font-size='42' text-anchor='middle' fill='%23ffffff' font-family='serif'>✝</text></svg>">
   
-  <!-- 引入专业高质量圣经音频播放模块 (戏剧圣经 / 磐石版 / 经典版) -->
+  <!-- 引入专业高质量多版本有声圣经播放器模块 -->
   <script src="bible-audio.js"></script>
 
   <style>
@@ -434,8 +433,8 @@
           <span id="readerCheckTag" style="font-size:11px; padding:2px 8px; border-radius:12px; background:#e2e8f0; color:#475569; font-family:var(--font-sans);">未读</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <!-- 播放音频按钮 -->
-          <button class="btn-pill" id="btnTtsRead" onclick="toggleTtsRead()">🔊 朗读</button>
+          <!-- 点击触发多版本在线有声朗读选择弹窗 -->
+          <button class="btn-pill" id="btnTtsRead" onclick="BibleAudio.showVersionSelector(curReadingBook, curReadingChapter)">🔊 朗读</button>
           <button onclick="closeReaderModal()" style="font-size:18px; color:var(--text-muted); padding:4px;">✕</button>
         </div>
       </div>
@@ -447,10 +446,10 @@
         </div>
         <div id="readerVersesBody"></div>
 
-        <!-- 灵修笔记区 -->
+        <!-- 灵修随笔笔记区 -->
         <div class="reader-notes-area">
           <div style="font-size:13px; font-weight:800; color:#374151;">✍️ 本章灵修感言 / 随想笔记</div>
-          <textarea class="notes-textarea" id="chapterNoteInput" placeholder="写下神今天通过本章对你说的感动... (自动本地保存)"></textarea>
+          <textarea class="notes-textarea" id="chapterNoteInput" placeholder="写下今天通过本章领受的感动... (自动本地保存)"></textarea>
         </div>
       </div>
 
@@ -644,7 +643,7 @@
 
     /* ================= 3. 沉浸式经文阅读器 (核心逻辑) ================= */
     async function openReaderModal(bookName, chapterNum) {
-      stopTts();
+      if (window.BibleAudio) window.BibleAudio.stop();
       curReadingBook = bookName;
       curReadingChapter = chapterNum;
 
@@ -674,7 +673,6 @@
       const bookId = BOOK_ID_MAP[bookName] || 1;
 
       try {
-        // CUNPS 为全球开源标准简体新标点和合本代码
         const res = await fetch(`https://bolls.life/get-chapter/CUNPS/${bookId}/${chapterNum}/`);
         const data = await res.json();
 
@@ -702,13 +700,13 @@
     }
 
     function closeReaderModal() {
-      stopTts();
+      if (window.BibleAudio) window.BibleAudio.stop();
       saveChapterNote();
       document.getElementById('readerModal').classList.remove('active');
     }
 
     function switchChapter(delta) {
-      stopTts();
+      if (window.BibleAudio) window.BibleAudio.stop();
       saveChapterNote();
       const book = BIBLE_BOOKS.find(b => b.name === curReadingBook);
       if (!book) return;
@@ -738,21 +736,6 @@
       if (text) userData.notes[noteKey] = text;
       else delete userData.notes[noteKey];
       localStorage.setItem('bible_journey_data', JSON.stringify(userData));
-    }
-
-    /* 联动专业音频模块播放 (戏剧圣经 / 磐石版) */
-    function toggleTtsRead() {
-      if (window.BibleAudio) {
-        window.BibleAudio.toggle(curReadingBook, curReadingChapter);
-      } else {
-        alert("音频模块加载中，请稍候...");
-      }
-    }
-
-    function stopTts() {
-      if (window.BibleAudio) {
-        window.BibleAudio.pause();
-      }
     }
 
     /* ================= 4. 天路地图与圣灵果实 ================= */
@@ -799,7 +782,6 @@
       const verse = document.getElementById('verseContent').innerText;
       const ref = document.getElementById('verseRef').innerText;
 
-      // 绘制背景与金色古雅边框
       ctx.fillStyle = "#fffdf9";
       ctx.fillRect(0, 0, 750, 1050);
 
@@ -811,18 +793,15 @@
       ctx.lineWidth = 1.5;
       ctx.strokeRect(40, 40, 670, 970);
 
-      // 标题
       ctx.fillStyle = "#b45309";
       ctx.font = "bold 32px serif";
       ctx.textAlign = "center";
       ctx.fillText("✦ 每日灵粮 · 圣经日签 ✦", 375, 120);
 
-      // 十字架徽章
       ctx.fillStyle = "#d97706";
       ctx.font = "40px serif";
       ctx.fillText("✝", 375, 190);
 
-      // 金句正文自动换行
       ctx.fillStyle = "#262626";
       ctx.font = "bold 34px serif";
       ctx.textAlign = "left";
@@ -839,19 +818,16 @@
         }
       }
 
-      // 出处
       ctx.fillStyle = "#92400e";
       ctx.font = "bold 26px sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(ref, 630, y + 50);
 
-      // 底部印鉴
       ctx.fillStyle = "#94a3b8";
       ctx.font = "20px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("灵粮行旅 · 向阳而生 · 圣经伴读系统", 375, 960);
 
-      // 导出图片
       const imgData = canvas.toDataURL('image/png');
       const win = window.open();
       if (win) {
