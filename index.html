@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>灵粮行旅 - 简体和合本趣味圣经伴读系统</title>
+  <!-- 自定义金十字图标 -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23d97706'/><text x='50' y='65' font-size='42' text-anchor='middle' fill='%23ffffff' font-family='serif'>✝</text></svg>">
   
-  <!-- 引入专业高质量多版本有声圣经播放器模块 -->
+  <!-- 引入逐节同步高亮有声伴读引擎 -->
   <script src="bible-audio.js"></script>
 
   <style>
@@ -177,7 +178,7 @@
     .book-card.completed .book-progress-fill { background: var(--accent-green); }
     .book-count-text { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 3px; font-weight: 700; }
 
-    /* ========== 模块 3: 沉浸式经文阅读器弹窗 (核心) ========== */
+    /* ========== 模块 3: 沉浸式经文阅读器弹窗 ========== */
     .reader-modal-backdrop {
       position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(8px);
       display: none; align-items: center; justify-content: center; z-index: 2000; padding: 14px;
@@ -204,8 +205,7 @@
       line-height: 1.6;
     }
     .verse-p {
-      font-size: 18px; line-height: 2.1; color: #2c2925; margin-bottom: 14px; text-align: justify;
-      position: relative;
+      font-size: 18px; line-height: 2.1; color: #2c2925; margin-bottom: 10px; text-align: justify;
     }
     .verse-num {
       font-family: var(--font-sans); font-size: 11px; font-weight: 900; color: var(--primary);
@@ -433,8 +433,8 @@
           <span id="readerCheckTag" style="font-size:11px; padding:2px 8px; border-radius:12px; background:#e2e8f0; color:#475569; font-family:var(--font-sans);">未读</span>
         </div>
         <div style="display:flex; align-items:center; gap:8px;">
-          <!-- 点击触发多版本在线有声朗读选择弹窗 -->
-          <button class="btn-pill" id="btnTtsRead" onclick="BibleAudio.showVersionSelector(curReadingBook, curReadingChapter)">🔊 朗读</button>
+          <!-- 一键启动逐节字幕伴读 -->
+          <button class="btn-pill" id="btnTtsRead" onclick="toggleAudioReading()">🔊 朗读</button>
           <button onclick="closeReaderModal()" style="font-size:18px; color:var(--text-muted); padding:4px;">✕</button>
         </div>
       </div>
@@ -641,13 +641,13 @@
       renderBooks(cat);
     }
 
-    /* ================= 3. 沉浸式经文阅读器 (核心逻辑) ================= */
+    /* ================= 3. 沉浸式经文阅读器与逐节字幕挂载 ================= */
     async function openReaderModal(bookName, chapterNum) {
       if (window.BibleAudio) window.BibleAudio.stop();
       curReadingBook = bookName;
       curReadingChapter = chapterNum;
 
-      document.getElementById('readerBookTitle').innerText = `${bookName} 第 ${chapterNum} 章 (简体和合本)`;
+      document.getElementById('readerBookTitle').innerText = `${bookName} 第 ${chapterNum} 章`;
       
       const readArr = userData.readChapters[bookName] || [];
       const isRead = readArr.includes(chapterNum);
@@ -677,12 +677,18 @@
         const data = await res.json();
 
         if (Array.isArray(data) && data.length > 0) {
-          document.getElementById('readerContextIntro').innerHTML = `<b>【章节概览】</b> ${bookName} 第 ${chapterNum} 章 · 简体和合本经文`;
+          document.getElementById('readerContextIntro').innerHTML = `<b>【章节概览】</b> ${bookName} 第 ${chapterNum} 章 · 简体和合本经文 (点击任意节可直接点读)`;
+          
           document.getElementById('readerVersesBody').innerHTML = data.map(item => `
-            <p class="verse-p">
+            <p class="verse-p" data-verse="${item.verse}" onclick="BibleAudio.playFromVerse(${item.verse})">
               <span class="verse-num">${item.verse}</span>${item.text}
             </p>
           `).join('');
+
+          // 将本章经文精准注入有声模块
+          if (window.BibleAudio) {
+            window.BibleAudio.setVerses(bookName, chapterNum, data);
+          }
         } else {
           throw new Error("数据为空");
         }
@@ -697,6 +703,12 @@
 
       const noteKey = `${bookName}_${chapterNum}`;
       document.getElementById('chapterNoteInput').value = (userData.notes && userData.notes[noteKey]) || '';
+    }
+
+    function toggleAudioReading() {
+      if (window.BibleAudio) {
+        window.BibleAudio.toggle();
+      }
     }
 
     function closeReaderModal() {
